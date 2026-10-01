@@ -15,6 +15,13 @@ The HCI LE Read Buffer Size command (`OGF 0x08`, `OCF 0x0002`, opcode
 through its active firmware. `lsusb -t` also shows this adapter currently
 running at full speed (12 Mbps).
 
+A controller/configuration audit on 2026-10-01 found only `hci0`, attached to
+this USB adapter; `rfkill` reports it unblocked. No second USB or PCI Bluetooth
+controller is present. `/etc/bluetooth/main.conf` has no active
+`ControllerMode` override (its example is `dual`), and no `btusb` modprobe
+override was found. The missing LE commands are not explained by a blocked
+radio, a second-controller selection, or an explicit BlueZ mode restriction.
+
 On the boot that began at 02:39, the first USB device-descriptor read on
 `usb2-2` failed once with `-71` (`EPROTO`); the immediate retry succeeded.
 After the DKMS reinstall, a fresh boot at 04:24:39 enumerated `0a12:0001` on
