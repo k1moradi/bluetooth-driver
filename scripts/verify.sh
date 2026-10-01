@@ -3,7 +3,7 @@
 # provenance/<variant>.manifest. Exits non-zero (and prints the diff) if the
 # committed source contains anything not derivable from the manifest + patch.
 #
-# Usage: tools/verify.sh <variant>   (honours KERNEL_GIT like regen.sh)
+# Usage: scripts/verify.sh <variant>   (honours KERNEL_GIT like regen.sh)
 set -euo pipefail
 
 V=${1:?usage: verify.sh <variant>}
@@ -11,7 +11,7 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-"$ROOT/tools/regen.sh" "$V" "$tmp" >/dev/null
+"$ROOT/scripts/regen.sh" "$V" "$tmp" >/dev/null
 
 if diff -ru "$ROOT/src/$V" "$tmp"; then
     echo "OK: src/$V matches provenance/$V.manifest + patch"

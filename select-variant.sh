@@ -66,7 +66,7 @@ echo "csr8510-fix: kernel $kv -> source variant src/$variant"
 if [ "$tested" = no ]; then
     echo "csr8510-fix: note: kernel series $maj.$min is untested with this" \
          "package; using the nearest variant. If the build fails, please" \
-         "open an issue at https://github.com/hhsnake/csr8510-fix" >&2
+         "open an issue at https://github.com/k1moradi/bluetooth-driver" >&2
 fi
 if [ "$n" -lt 504 ]; then
     echo "csr8510-fix: warning: kernels older than 5.4 were never targeted" \

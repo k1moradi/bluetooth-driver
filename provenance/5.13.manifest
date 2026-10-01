@@ -3,8 +3,8 @@
 #   src/5.13/  =  pristine kernel files @ <commit>  +  patches/csr8510-fix-5.13.patch
 #
 # The trust anchor is the sha256 of each file's content, NOT the download URL.
-# Any mirror serving the same bytes is acceptable; tools/regen.sh verifies the
-# hash before use and tools/verify.sh proves src/5.13 equals the result. This
+# Any mirror serving the same bytes is acceptable; scripts/regen.sh verifies the
+# hash before use and scripts/verify.sh proves src/5.13 equals the result. This
 # is what lets a reviewer confirm nothing was slipped into the vendored source.
 #
 # This variant exists because btintel's ABI changed in 5.13: btintel_download_firmware()

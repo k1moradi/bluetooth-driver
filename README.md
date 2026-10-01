@@ -1,4 +1,40 @@
-# csr8510-fix
+# Bluetooth driver support
+
+This repository is a maintained copy and adaptation of
+[`hhsnake/csr8510-fix`](https://github.com/hhsnake/csr8510-fix). It packages the
+Linux `btusb` workaround for fake CSR8510 A10 Bluetooth dongles as a DKMS
+module. The module package itself is named `csr8510-fix` to match its DKMS
+registration.
+
+## Repository layout
+
+```text
+scripts/       Source regeneration and reproducibility checks
+src/<version>/ Version-matched btusb.c and the kernel headers it includes
+patches/       Per-kernel source patches
+provenance/    Pinned upstream hashes, manifests, and source references
+docs/          Project pages and host-specific findings
+```
+
+Each `src/<version>/` directory keeps `btusb.c` beside the exact kernel
+headers for that source version. The DKMS selector copies this matched set
+together for the build, so there is no shared `include/` directory.
+
+## Bluetooth Low Energy capability
+
+The driver patch handles known USB and HCI initialization faults in supported
+CSR clone adapters. It cannot add Bluetooth Low Energy (LE) support when the
+adapter firmware does not implement the LE HCI commands. See
+[`docs/host-findings.md`](docs/host-findings.md) for the CSR dongle and Razer
+Naga V2 HyperSpeed investigation that led to this repository update.
+
+The Naga V2 HyperSpeed supports Bluetooth LE and 2.4 GHz HyperSpeed modes;
+Razer documents [the mouse specifications](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
+and [Bluetooth pairing steps](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless).
+
+---
+
+## `csr8510-fix` DKMS package
 
 Patched Linux `btusb` driver for **fake CSR8510 A10 / CSR 4.0–5.x clone USB
 Bluetooth dongles** (`0a12:0001`), packaged as DKMS so it is rebuilt
@@ -60,8 +96,8 @@ Only detected fake devices are affected — real CSR hardware is untouched.
 
 ```bash
 sudo apt install git dkms linux-headers-$(uname -r)
-git clone https://github.com/hhsnake/csr8510-fix.git
-cd csr8510-fix
+git clone https://github.com/k1moradi/bluetooth-driver.git
+cd bluetooth-driver
 sudo ./install.sh
 ```
 
@@ -69,8 +105,8 @@ sudo ./install.sh
 
 ```bash
 sudo dnf install git dkms kernel-devel-$(uname -r)
-git clone https://github.com/hhsnake/csr8510-fix.git
-cd csr8510-fix
+git clone https://github.com/k1moradi/bluetooth-driver.git
+cd bluetooth-driver
 sudo ./install.sh
 ```
 
@@ -86,8 +122,8 @@ K=$(rpm -qf --qf '%{NAME}' /boot/vmlinuz-$(uname -r))
 sudo dnf install git dkms gcc make bc elfutils-libelf-devel bluez \
   "$K-devel-$(uname -r)"
 sudo systemctl enable --now bluetooth
-git clone https://github.com/hhsnake/csr8510-fix.git
-cd csr8510-fix
+git clone https://github.com/k1moradi/bluetooth-driver.git
+cd bluetooth-driver
 sudo ./install.sh
 ```
 
@@ -96,8 +132,8 @@ sudo ./install.sh
 ```bash
 sudo pacman -S git dkms linux-headers bluez-utils
 sudo systemctl enable --now bluetooth
-git clone https://github.com/hhsnake/csr8510-fix.git
-cd csr8510-fix
+git clone https://github.com/k1moradi/bluetooth-driver.git
+cd bluetooth-driver
 sudo ./install.sh
 ```
 
@@ -107,8 +143,8 @@ sudo ./install.sh
 sudo pacman -S --needed git dkms bluez bluez-utils \
   "$(pacman -Qoq /usr/lib/modules/$(uname -r)/vmlinuz)-headers"
 sudo systemctl enable --now bluetooth
-git clone https://github.com/hhsnake/csr8510-fix.git
-cd csr8510-fix
+git clone https://github.com/k1moradi/bluetooth-driver.git
+cd bluetooth-driver
 sudo ./install.sh
 ```
 
@@ -132,8 +168,8 @@ sudo reboot
 After the reboot System -> Konsole:
 
 ```bash
-git clone https://github.com/hhsnake/csr8510-fix.git
-cd csr8510-fix
+git clone https://github.com/k1moradi/bluetooth-driver.git
+cd bluetooth-driver
 sudo ./install.sh
 ```
 
@@ -256,7 +292,7 @@ sudo systemctl restart bluetooth
 ## Questions & feedback
 
 Bug reports, questions and suggestions are welcome in
-[GitHub Issues](https://github.com/hhsnake/csr8510-fix/issues).
+[GitHub Issues](https://github.com/k1moradi/bluetooth-driver/issues).
 When reporting, please attach the output of `uname -r`,
 `lsusb | grep 0a12` and `journalctl -k | grep -iE 'bluetooth|csr'`.
 

@@ -19,7 +19,7 @@ diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
  
  struct btusb_data {
  	struct hci_dev       *hdev;
-@@ -953,13 +957,16 @@
+@@ -953,12 +957,15 @@
  	int err;
  
  	data = hci_get_drvdata(hdev);
@@ -29,14 +29,13 @@ diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
  		bt_dev_err(hdev, "Failed usb_autopm_get_interface: %d", err);
  		return;
  	}
- 
++
 +	/* btusb_disconnect() drops it once the reset has unbound us */
 +	if (test_and_set_bit(BTUSB_RESET, &data->flags))
 +		usb_autopm_put_interface_no_suspend(data->intf);
-+
+ 
  	bt_dev_err(hdev, "Resetting usb device.");
  	usb_queue_reset_device(data->intf);
- }
 @@ -1086,6 +1093,53 @@
  	btusb_rtl_alloc_devcoredump(hdev, &hdr, NULL, 0);
  }
@@ -110,36 +109,88 @@ diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
  			/* Complete frame */
  			btusb_recv_event(data, skb);
  			skb = NULL;
-@@ -1378,6 +1444,10 @@
+@@ -1377,6 +1443,10 @@
+ 
  	if (urb->status == 0) {
  		hdev->stat.byte_rx += urb->actual_length;
- 
++
 +		if (urb->actual_length &&
 +		    test_bit(BTUSB_FAKE_CSR, &data->flags))
 +			set_bit(BTUSB_CSR_EVENT_SEEN, &data->flags);
-+
+ 
  		if (btusb_recv_intr(data, urb->transfer_buffer,
  				    urb->actual_length) < 0) {
- 			bt_dev_err(hdev, "corrupted event packet");
-@@ -1892,6 +1962,8 @@
- 	if (err < 0)
- 		return err;
+@@ -1396,14 +1466,17 @@
  
-+	clear_bit(BTUSB_CSR_EVENT_SEEN, &data->flags);
-+
- 	/* Patching USB firmware files prior to starting any URBs of HCI path
- 	 * It is more safe to use USB bulk channel for downloading USB patch
- 	 */
-@@ -1965,6 +2037,8 @@
- 	btusb_stop_traffic(data);
- 	btusb_free_frags(data);
- 
-+	btusb_csr_reset_on_silent_close(hdev);
-+
+ 	err = usb_submit_urb(urb, GFP_ATOMIC);
+ 	if (err < 0) {
+-		/* -EPERM: urb is being killed;
+-		 * -ENODEV: device got disconnected
++		/* close() can clear INTR_RUNNING after the check above but
++		 * before usb_submit_urb(). An unlink during that race is an
++		 * expected shutdown, not an HCI transport failure.
+ 		 */
+-		if (err != -EPERM && err != -ENODEV)
+-			bt_dev_err(hdev, "urb %p failed to resubmit (%d)",
+-				   urb, -err);
+-		if (err != -EPERM)
+-			hci_cmd_sync_cancel(hdev, -err);
++		if (test_bit(BTUSB_INTR_RUNNING, &data->flags)) {
++			if (err != -EPERM && err != -ENODEV && err != -ENOENT)
++				bt_dev_err(hdev, "urb %p failed to resubmit (%d)",
++					   urb, -err);
++			if (err != -EPERM && err != -ENOENT)
++				hci_cmd_sync_cancel(hdev, -err);
++		}
+ 		usb_unanchor_urb(urb);
+ 	}
+ }
+@@ -1523,7 +1596,7 @@
+ 		/* -EPERM: urb is being killed;
+ 		 * -ENODEV: device got disconnected
+ 		 */
+-		if (err != -EPERM && err != -ENODEV)
++		if (err != -EPERM && err != -ENODEV && err != -ENOENT)
+ 			bt_dev_err(hdev, "urb %p failed to resubmit (%d)",
+ 				   urb, -err);
+ 		usb_unanchor_urb(urb);
+@@ -1619,7 +1692,7 @@
+ 		/* -EPERM: urb is being killed;
+ 		 * -ENODEV: device got disconnected
+ 		 */
+-		if (err != -EPERM && err != -ENODEV)
++		if (err != -EPERM && err != -ENODEV && err != -ENOENT)
+ 			bt_dev_err(hdev, "urb %p failed to resubmit (%d)",
+ 				   urb, -err);
+ 		usb_unanchor_urb(urb);
+@@ -1775,7 +1848,7 @@
+ 		/* -EPERM: urb is being killed;
+ 		 * -ENODEV: device got disconnected
+ 		 */
+-		if (err != -EPERM && err != -ENODEV)
++		if (err != -EPERM && err != -ENODEV && err != -ENOENT)
+ 			bt_dev_err(hdev, "urb %p failed to resubmit (%d)",
+ 				   urb, -err);
+ 		usb_unanchor_urb(urb);
+@@ -1891,6 +1964,8 @@
  	err = usb_autopm_get_interface(data->intf);
  	if (err < 0)
- 		goto failed;
-@@ -2391,6 +2465,95 @@
+ 		return err;
++
++	clear_bit(BTUSB_CSR_EVENT_SEEN, &data->flags);
+ 
+ 	/* Patching USB firmware files prior to starting any URBs of HCI path
+ 	 * It is more safe to use USB bulk channel for downloading USB patch
+@@ -1964,6 +2039,8 @@
+ 
+ 	btusb_stop_traffic(data);
+ 	btusb_free_frags(data);
++
++	btusb_csr_reset_on_silent_close(hdev);
+ 
+ 	err = usb_autopm_get_interface(data->intf);
+ 	if (err < 0)
+@@ -2391,6 +2468,95 @@
  	return 0;
  }
  
@@ -235,7 +286,7 @@ diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
  static int btusb_setup_csr(struct hci_dev *hdev)
  {
  	struct btusb_data *data = hci_get_drvdata(hdev);
-@@ -2405,9 +2568,15 @@
+@@ -2405,9 +2571,15 @@
  	skb = __hci_cmd_sync(hdev, HCI_OP_READ_LOCAL_VERSION, 0, NULL,
  			     HCI_INIT_TIMEOUT);
  	if (IS_ERR(skb)) {
@@ -254,7 +305,7 @@ diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
  	}
  
  	rp = skb_pull_data(skb, sizeof(*rp));
-@@ -2478,7 +2647,10 @@
+@@ -2478,7 +2650,10 @@
  		is_fake = true;
  
  	if (is_fake) {
@@ -265,19 +316,18 @@ diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
  
  		/* Generally these clones have big discrepancies between
  		 * advertised features and what's actually supported.
-@@ -2489,9 +2661,10 @@
+@@ -2489,8 +2664,9 @@
  		hci_set_quirk(hdev, HCI_QUIRK_BROKEN_ERR_DATA_REPORTING);
  		hci_set_quirk(hdev, HCI_QUIRK_BROKEN_FILTER_CLEAR_ALL);
  		hci_set_quirk(hdev, HCI_QUIRK_NO_SUSPEND_NOTIFIER);
 -		hci_set_quirk(hdev, HCI_QUIRK_BROKEN_READ_VOICE_SETTING);
  		hci_set_quirk(hdev, HCI_QUIRK_BROKEN_READ_PAGE_SCAN_TYPE);
- 
-+		data->recv_event = btusb_recv_event_csr;
 +
++		data->recv_event = btusb_recv_event_csr;
+ 
  		/* Clear the reset quirk since this is not an actual
  		 * early Bluetooth 1.1 device from CSR.
- 		 */
-@@ -2518,23 +2691,59 @@
+@@ -2518,23 +2694,61 @@
  		 * To fix 2. clear the HCI's can_wake flag, this way the HCI
  		 * will still be autosuspended when it is not open.
  		 *
@@ -292,6 +342,9 @@ diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
  		 */
 +		btusb_log_csr_pm_state(hdev, data, "before allow", 0);
  		pm_runtime_allow(&data->udev->dev);
+-
+-		ret = pm_runtime_suspend(&data->udev->dev);
+-		if (ret >= 0)
 +		btusb_log_csr_pm_state(hdev, data, "after allow", 0);
 +
 +		/* autosuspend_check() refuses while an interface needs remote
@@ -314,27 +367,27 @@ diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
 +			msleep(100);
 +			ret = pm_runtime_force_suspend(&data->udev->dev);
 +		}
-+		/* Wake the device back up right away. Clones come back with a
-+		 * half-dead radio if they are left suspended for long.
-+		 */
-+		if (usb_autopm_get_interface(data->intf) == 0)
-+			usb_autopm_put_interface_no_suspend(data->intf);
-+		data->intf->needs_remote_wakeup = 1;
-+
 +		btusb_log_csr_pm_state(hdev, data, "after force_suspend", ret);
- 
--		ret = pm_runtime_suspend(&data->udev->dev);
--		if (ret >= 0)
++
 +		if (ret >= 0) {
  			msleep(200);
 -		else
 -			bt_dev_warn(hdev, "CSR: Couldn't suspend the device for our Barrot 8041a02 receive-issue workaround");
 +			ret = pm_runtime_force_resume(&data->udev->dev);
 +			btusb_log_csr_pm_state(hdev, data, "after force_resume", ret);
++
++			/* Re-enable runtime PM on the parent before resuming its
++			 * child interface. pm_runtime_enable() warns if an inactive
++			 * parent is enabled while it has active children.
++			 */
++			if (ret >= 0 && usb_autopm_get_interface(data->intf) == 0)
++				usb_autopm_put_interface_no_suspend(data->intf);
 +		} else {
 +			/* force_suspend() re-enables runtime PM on failure. */
 +			bt_dev_warn(hdev, "CSR: force_suspend failed; skipping one-shot suspend");
 +		}
++
++		data->intf->needs_remote_wakeup = 1;
  
  		pm_runtime_forbid(&data->udev->dev);
 -
@@ -343,7 +396,7 @@ diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
  
  		/* Re-enable autosuspend if this was requested */
  		if (enable_autosuspend)
-@@ -4253,8 +4462,10 @@
+@@ -4253,8 +4467,10 @@
  
  		/* Fake CSR devices with broken commands */
  		if (le16_to_cpu(udev->descriptor.idVendor)  == 0x0a12 &&
@@ -355,17 +408,17 @@ diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
  	}
  
  	if (id->driver_info & BTUSB_SNIFFER) {
-@@ -4359,6 +4570,9 @@
+@@ -4358,6 +4574,9 @@
+ 
  	if (data->reset_gpio)
  		gpiod_put(data->reset_gpio);
- 
++
 +	if (test_and_clear_bit(BTUSB_RESET, &data->flags))
 +		usb_autopm_put_interface_no_suspend(data->intf);
-+
+ 
  	hci_free_dev(hdev);
  }
- 
-@@ -4562,6 +4776,10 @@
+@@ -4562,6 +4781,10 @@
  module_param(reset, bool, 0644);
  MODULE_PARM_DESC(reset, "Send HCI reset command on initialization");
  

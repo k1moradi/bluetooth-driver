@@ -114,20 +114,20 @@ Reset (<code>0x0c03</code>) — instead of leaving the controller stuck.</li>
 
 <h3>Ubuntu / Debian</h3>
 <pre><code>sudo apt install git dkms linux-headers-$(uname -r)
-git clone https://github.com/hhsnake/csr8510-fix.git
+git clone https://github.com/k1moradi/bluetooth-driver.git
 cd csr8510-fix
 sudo ./install.sh</code></pre>
 
 <h3>Fedora</h3>
 <pre><code>sudo dnf install git dkms kernel-devel-$(uname -r)
-git clone https://github.com/hhsnake/csr8510-fix.git
+git clone https://github.com/k1moradi/bluetooth-driver.git
 cd csr8510-fix
 sudo ./install.sh</code></pre>
 
 <h3>Arch Linux</h3>
 <pre><code>sudo pacman -S git dkms linux-headers bluez-utils
 sudo systemctl enable --now bluetooth
-git clone https://github.com/hhsnake/csr8510-fix.git
+git clone https://github.com/k1moradi/bluetooth-driver.git
 cd csr8510-fix
 sudo ./install.sh</code></pre>
 
@@ -135,7 +135,7 @@ sudo ./install.sh</code></pre>
 <pre><code>sudo pacman -S --needed git dkms bluez bluez-utils \
   "$(pacman -Qoq /usr/lib/modules/$(uname -r)/vmlinuz)-headers"
 sudo systemctl enable --now bluetooth
-git clone https://github.com/hhsnake/csr8510-fix.git
+git clone https://github.com/k1moradi/bluetooth-driver.git
 cd csr8510-fix
 sudo ./install.sh</code></pre>
 
@@ -154,7 +154,7 @@ sudo pacman -S --needed git dkms gcc make bc bluez bluez-utils "$K" "$K-headers"
 sudo systemctl enable --now bluetooth
 sudo reboot</code></pre>
 <p>After the reboot:</p>
-<pre><code>git clone https://github.com/hhsnake/csr8510-fix.git
+<pre><code>git clone https://github.com/k1moradi/bluetooth-driver.git
 cd csr8510-fix
 sudo ./install.sh</code></pre>
 <p><strong>SteamOS updates remove the module.</strong> The system updates by
@@ -269,7 +269,7 @@ Ubuntu, Debian, Fedora, Arch, CachyOS, SteamOS? Это дешёвый клон �
 
 <h2>Questions &amp; feedback</h2>
 <p>Bug reports, questions and suggestions are welcome in
-<a href="https://github.com/hhsnake/csr8510-fix/issues">GitHub Issues</a>.
+<a href="https://github.com/k1moradi/bluetooth-driver/issues">GitHub Issues</a>.
 When reporting, please attach the output of <code>uname -r</code>,
 <code>lsusb | grep 0a12</code> and
 <code>journalctl -k | grep -iE 'bluetooth|csr'</code>.</p>

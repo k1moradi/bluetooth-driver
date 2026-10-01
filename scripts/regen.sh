@@ -2,7 +2,7 @@
 # Regenerate src/<variant>/ from provenance/<variant>.manifest:
 #   pristine kernel files (verified by sha256) + our patch.
 #
-# Usage: tools/regen.sh <variant> [dest_dir]
+# Usage: scripts/regen.sh <variant> [dest_dir]
 #   dest_dir defaults to src/<variant>. Set KERNEL_GIT=/path/to/linux(.git)
 #   to pull files from a local clone instead of the network.
 set -euo pipefail
