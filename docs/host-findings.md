@@ -1,55 +1,75 @@
-# Host findings: CSR dongle and Razer Naga V2 HyperSpeed
+# Host findings: CSR adapter and Razer Naga V2 HyperSpeed
 
-Observed on 2026-10-01 while working on this machine's Bluetooth setup.
+Observed on 2026-10-01 on kernel `7.0.0-34-generic`.
 
-## Controller capability
+## Bluetooth controller
 
-The connected CSR USB adapter enumerates as `0a12:0001`. Its active controller
-reports HCI/LMP version 2.0 and subversion `0x0c5c`. The HCI LE Read Buffer
-Size command (`OGF 0x08`, `OCF 0x0002`, opcode `0x2002`) returns status
-`0x01` (`Unknown HCI Command`). BlueZ can power and expose `hci0`, but that
-does not mean its firmware implements Bluetooth LE.
+The USB adapter enumerates as `0a12:0001`, with USB `bcdUSB 1.10` and
+`bcdDevice 1.34`. Its active controller reports HCI/LMP 2.0, LMP subversion
+`0x0c5c`, and manufacturer 10 (CSR). The Linux driver classifies this exact
+`bcdDevice`/HCI/LMP combination as an unbranded clone.
 
-This is a controller-firmware capability limit. A host-side `btusb` patch can
-repair USB transport, power-management, and HCI initialization problems; it
-cannot implement missing LE controller commands. Do not spend the mouse's
-short pairing window trying to pair it through this adapter.
+The HCI LE Read Buffer Size command (`OGF 0x08`, `OCF 0x0002`, opcode
+`0x2002`) and LE Read Local Supported Features (`0x2003`) both return status
+`0x01`, `Unknown HCI Command`. The controller therefore does not expose LE
+through its active firmware. `lsusb -t` also shows this adapter currently
+running at full speed (12 Mbps).
 
-## Mouse and receiver
+That evidence describes this USB unit and its active firmware; it does not
+identify the chip die or prove that every device sold under this VID/PID has
+the same silicon. Qualcomm specifies the genuine CSR8510 A10 as Bluetooth 4.0,
+with Bluetooth LE and USB 2.0 support ([product specifications](https://www.qualcomm.com/bluetooth/products/csr8510)).
+The reported HCI 2.0 version and clone signature do not match those capabilities.
 
-The Razer Naga V2 HyperSpeed supports Bluetooth LE as well as Razer's 2.4 GHz
+Qualcomm's CSR8510 software page lists ROM patches and tools but requires a
+Qualcomm account and license agreement to access them. No firmware image has
+been identified or validated for this clone, so an arbitrary firmware flash
+would risk leaving this adapter unusable. A host-side `btusb` patch cannot add
+LE HCI commands the active controller firmware rejects.
+
+## Mouse
+
+The Razer Naga V2 HyperSpeed supports Bluetooth LE and Razer's 2.4 GHz
 HyperSpeed mode. See [Razer's specifications](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
 and [Bluetooth pairing instructions](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless).
 
-A Razer USB device with product ID `1532:00b4` was also present and identified
-as a Naga V2 HyperSpeed. It appears to be the USB receiver path, separate from
-the CSR Bluetooth controller. No Bluetooth pairing attempt was made.
+The connected Razer device identifies as `1532:00b4`, Razer Naga V2
+HyperSpeed. Its USB descriptor reports `bcdUSB 2.00`, although the current
+USB link is full speed (12 Mbps). This USB enumeration is separate from the
+CSR Bluetooth controller. HCI is the host-controller interface between Linux
+and the Bluetooth controller; the mouse does not need to implement host-side
+HCI. No Bluetooth pairing attempt was made.
 
-## Driver changes and validation
+## Driver changes and log status
 
-The 6.17 source variant used on kernel `7.0.0-34-generic` was updated to:
+The `src/6.17` variant installed through DKMS includes these fixes:
 
 - resume the CSR device's runtime-PM state before waking its child USB
   interface, avoiding the inactive-parent/active-child warning;
 - ignore expected `-ENOENT` URB completions during shutdown so the interrupt
-  completion handler does not try to resubmit work after unlink.
+  completion handler does not resubmit work after unlink.
 
-The variant is pinned to upstream Linux commit
-`e5f0a698b34ed76002dc5cff3804a61c80233a7a`. The pristine `btusb.c` is retained
-under `provenance/kernel-6.17/`; its hash is recorded in
-`provenance/6.17.manifest`. The three Linux Bluetooth core files consulted to
-classify remaining HCI quirk messages are under
-`provenance/kernel-7.0.0/net/bluetooth/`.
+The source variant is pinned to upstream Linux commit
+`e5f0a698b34ed76002dc5cff3804a61c80233a7a`. The pristine `btusb.c` and the
+Linux Bluetooth core reference files are retained under `provenance/`.
+`scripts/verify.sh 6.17` reproduced the source from its pinned hashes and
+patch. DKMS is installed for the running kernel, and its source matches
+`src/6.17/btusb.c`.
 
-`scripts/verify.sh 6.17` reproduces the variant from the pinned source hashes
-and patch. The DKMS build was installed for the running kernel. After loading
-the updated module, the inactive-parent warning and shutdown URB resubmit
-error were absent. The controller's unsupported-command warnings remain
-because they describe commands the firmware does not support.
+The latest module reload showed no PM parent/child warning or shutdown URB
+resubmit error. Earlier boot/reload messages in this boot journal predate the
+final module install. The remaining `HCI ... advertised, but not supported`
+messages are emitted by Linux when it records the clone-specific quirks that
+skip commands the controller firmware misreports. They identify unsupported
+controller commands; they are not failures of the PM or URB fixes.
 
-## Practical next step
+The current initramfs does not contain `btusb`; `modprobe` resolves it to the
+DKMS copy in `updates/dkms`. A fresh boot after the final module install has
+not yet been observed.
 
-For Bluetooth LE pairing, use a Bluetooth adapter whose active controller
-firmware supports LE HCI commands. The existing Razer receiver may provide
-2.4 GHz mouse operation if it is the HyperSpeed receiver and the mouse is set
-to that wireless mode.
+## Result
+
+The driver lifecycle faults have been patched and the current DKMS module is
+active. Bluetooth LE mouse pairing remains unverified and cannot proceed with
+the controller's current HCI firmware response. A validated firmware image
+for this exact adapter or an LE-capable controller is still needed.

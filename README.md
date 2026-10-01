@@ -24,9 +24,11 @@ together for the build, so there is no shared `include/` directory.
 
 The driver patch handles known USB and HCI initialization faults in supported
 CSR clone adapters. It cannot add Bluetooth Low Energy (LE) support when the
-adapter firmware does not implement the LE HCI commands. See
-[`docs/host-findings.md`](docs/host-findings.md) for the CSR dongle and Razer
-Naga V2 HyperSpeed investigation that led to this repository update.
+adapter firmware does not implement LE HCI commands. Qualcomm specifies the
+genuine CSR8510 A10 as Bluetooth 4.0 with LE and USB 2.0; the adapter examined
+here instead reports HCI 2.0 and rejects LE commands. Its USB ID alone does not
+prove which silicon is inside. See [`docs/host-findings.md`](docs/host-findings.md)
+for the measured details and firmware-access status.
 
 The Naga V2 HyperSpeed supports Bluetooth LE and 2.4 GHz HyperSpeed modes;
 Razer documents [the mouse specifications](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
