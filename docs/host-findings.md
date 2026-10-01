@@ -15,11 +15,12 @@ The HCI LE Read Buffer Size command (`OGF 0x08`, `OCF 0x0002`, opcode
 through its active firmware. `lsusb -t` also shows this adapter currently
 running at full speed (12 Mbps).
 
-On the current boot, the first USB device-descriptor read on `usb2-2` failed
-once with `-71` (`EPROTO`); the immediate retry succeeded and enumerated the
-adapter as `0a12:0001`. The error occurs before `btusb` binds, so the DKMS
-driver cannot correct that first-read failure. No repeated descriptor or
-disconnect errors were present in the inspected log.
+On the boot that began at 02:39, the first USB device-descriptor read on
+`usb2-2` failed once with `-71` (`EPROTO`); the immediate retry succeeded.
+After the DKMS reinstall, a fresh boot at 04:24:39 enumerated `0a12:0001` on
+the first read with no descriptor or disconnect error. The one-off error
+occurs before `btusb` binds, so the DKMS driver cannot correct it; it did not
+recur on the fresh boot.
 
 That evidence describes this USB unit and its active firmware; it does not
 identify the chip die or prove that every device sold under this VID/PID has
@@ -57,6 +58,14 @@ controller. The saved record has `Trusted=true` but no `Paired=true` field;
 its LE-only technology entry therefore does not establish the current mouse's
 Bluetooth transport or pairing state.
 
+With the Naga's blue logo blinking, two 30-second `bluetoothctl scan bredr`
+windows completed without discovering a device. `bluetoothctl devices` and
+`hcitool con` were empty afterward, and discovery was stopped. No pair or
+connect command was issued. A subsequent `scan le` request returned
+`org.bluez.Error.InProgress` even though `bluetoothctl show` reported
+`Discovering: no`; that request did not establish LE discovery. The direct LE
+HCI capability commands still return `Unknown HCI Command`.
+
 ## Driver changes and log status
 
 The repository now carries only `src/7.0/`, based on Ubuntu's
@@ -73,20 +82,22 @@ patched source in `src/7.0/btusb.c` and the copy installed under
 `modinfo` resolves `btusb` to
 `/lib/modules/7.0.0-34-generic/updates/dkms/btusb.ko.zst`.
 
-The latest module reload showed no inactive-parent/active-child PM warning or
-shutdown URB resubmit error. It logged the expected unbranded-clone detection,
-the new `CSR: masking unsupported advertised HCI commands` message, and the
-remaining unsupported `Set Event Filter` warning. A fresh boot after this
-latest reinstall has not yet been observed.
+The fresh boot at 04:24:39 loaded that DKMS module: its `modinfo` source
+version matches `/sys/module/btusb/srcversion`. Startup logged the expected
+unbranded-clone detection, command-mask information, and the remaining
+unsupported `Set Event Filter` warning. It did not log the stored-link-key or
+erroneous-data warnings seen when the older module loaded on the previous
+boot. The inactive-parent/active-child PM warning and shutdown URB resubmit
+error also did not recur.
 
 The `Set Event Filter` warning is the Bluetooth core reporting
 `HCI_QUIRK_BROKEN_FILTER_CLEAR_ALL`, which the clone-specific `btusb` setup
 enables. In this kernel the quirk makes the event-filter helper return before
 it sends `HCI_OP_SET_EVENT_FLT`; removing it could send the command that locks
 up some clone controllers. This warning describes the active protection, not
-a failed command transaction. Earlier stored-link-key and erroneous-data
-warnings in this boot's log came from the module loaded before the latest
-reload; the current module masks those advertised command bits.
+a failed command transaction. The stored-link-key and erroneous-data warnings
+from the previous boot came from the older module loaded before the final DKMS
+reinstall; the current module masks those advertised command bits at startup.
 
 This host boots with Dracut 110 (`dracut-cmdline.service` ran during the
 current boot); the `initramfs-tools` package is not installed. The root-only
@@ -100,5 +111,8 @@ configuration change is needed for this module.
 ## Result
 
 The driver lifecycle fixes are installed from the correctly named 7.0 source
-variant. Mouse pairing remains unverified. The next useful check is a pairing
-attempt with the mouse in its Bluetooth mode, using BR/EDR discovery.
+variant and verified after a fresh boot. The mouse was not discovered in two
+BR/EDR windows while its pairing indicator was blinking; its Bluetooth
+transport remains undocumented by Razer. The current adapter cannot perform
+LE HCI operations, so an LE-only Naga cannot connect through this firmware.
+No pairing attempt was made.
