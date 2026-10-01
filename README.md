@@ -72,16 +72,16 @@ does not identify the silicon or prove that another unit has the same
 firmware. See [`docs/host-findings.md`](docs/host-findings.md) for the measured
 details.
 
-Razer documents Bluetooth and 2.4 GHz modes for the Naga V2 HyperSpeed, but
-its public specifications do not identify whether the Bluetooth connection
-uses BR/EDR or LE. Its [specifications](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
-and [pairing guide](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless)
-describe the normal Bluetooth pairing flow. A BR/EDR discovery scan and a
-direct Classic inquiry were run while the user reported the mouse in pairing
-mode; neither found it, so no address was available for pairing. The adapter's
-active firmware rejects LE HCI commands, leaving the Naga's Bluetooth
-transport unresolved. See [`docs/host-findings.md`](docs/host-findings.md) for
-the exact scan results.
+Razer's [official Naga V2 HyperSpeed guide](https://dl.razerzone.com/master-guides/RazerSynapse3/NAGAV2HYPERSPEED-00000180-en.pdf)
+describes pairing in Bluetooth mode and specifies approximately 400 hours on
+BLE, compared with 250 hours on HyperSpeed. BLE is documented for its
+Bluetooth path, although the guide does not explicitly rule out a BR/EDR
+fallback. A BR/EDR discovery scan and a direct Classic inquiry were run while
+the user reported the mouse in pairing mode; neither found it, so no address
+was available for pairing. The adapter's active firmware rejects LE HCI
+commands, so its documented BLE path is unavailable with this controller.
+See [`docs/host-findings.md`](docs/host-findings.md) for the measured
+capabilities and scan results.
 
 ## Source provenance and verification
 

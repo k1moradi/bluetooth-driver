@@ -35,14 +35,21 @@ been identified or validated for this clone, so an arbitrary firmware flash
 would risk leaving this adapter unusable. A host-side `btusb` patch cannot add
 LE HCI commands the active controller firmware rejects.
 
+The installed `linux-firmware` tree contains no CSR/CSR8510 image. Ubuntu's
+`bluez-firmware` package is not installed; the available `1.2-11ubuntu2`
+package's [file list](https://packages.ubuntu.com/resolute/all/bluez-firmware/filelist)
+contains Broadcom, Synaptics, and STLC2500 firmware, not CSR firmware.
+Installing that package would not add an LE-capable image for this adapter.
+
 ## Mouse
 
-Razer lists Bluetooth and 2.4 GHz HyperSpeed connectivity for the Naga V2
-HyperSpeed. Its public [specifications](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
-and [Bluetooth pairing instructions](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless)
-do not say whether the Bluetooth mode uses BR/EDR or LE. This controller
-supports BR/EDR but its active firmware rejects LE HCI commands, so pairing
-over BR/EDR remains possible if the mouse supports that transport.
+Razer's [official Naga V2 HyperSpeed guide](https://dl.razerzone.com/master-guides/RazerSynapse3/NAGAV2HYPERSPEED-00000180-en.pdf)
+lists Bluetooth and 2.4 GHz HyperSpeed connectivity, instructs pairing in
+Bluetooth mode, and specifies approximately 400 hours on BLE versus 250 hours
+on HyperSpeed. BLE is therefore part of the mouse's documented Bluetooth path.
+The guide does not explicitly say whether BR/EDR is also supported as a
+fallback. This adapter supports BR/EDR but its active firmware rejects LE HCI
+commands, so its Bluetooth discovery can only try the BR/EDR path.
 
 The connected Razer device identifies as `1532:00b4`, Razer Naga V2
 HyperSpeed. Its USB descriptor reports `bcdUSB 2.00`, although the current
@@ -70,10 +77,10 @@ No Razer address was available for a pair/connect command.
 An LE scan requested immediately after the Classic scan returned
 `org.bluez.Error.InProgress`. A later `bluetoothctl show` reported
 `Discovering: no`; no LE scan result was obtained. Separate direct LE HCI
-capability commands return
-`Unknown HCI Command`, so this controller's active firmware does not expose
-LE. The Razer pairing attempt therefore remains unresolved: Classic discovery
-did not find the mouse, and LE discovery cannot be tested with this controller.
+capability commands return `Unknown HCI Command`, so this controller's active
+firmware does not expose LE. Classic discovery did not find the mouse, and the
+documented BLE path cannot be tested with this controller. No pairing attempt
+or connection has succeeded.
 
 ## Driver changes and log status
 
@@ -123,7 +130,9 @@ The driver lifecycle fixes are installed from the correctly named 7.0 source
 variant and verified after a fresh boot. The mouse was not discovered in the
 two earlier BR/EDR windows or in the 2026-10-01 BR/EDR retest while the user
 reported pairing mode active. No device address was found, so no pair/connect
-command could be issued. Razer's public documentation still does not identify
-the mouse's Bluetooth transport. This adapter cannot perform LE HCI operations;
-if the Naga uses LE-only HID, it cannot connect through this controller's
-active firmware. Connection remains unverified.
+command could be issued. Razer's guide documents BLE use, while the attached
+controller rejects LE HCI commands. Thus the supported BLE path is unavailable
+with this controller's active firmware; no validated firmware image has been
+found that could enable it. The original mouse receiver is a separate
+`1532:00b4` USB device and was disconnected on 2026-10-01. Bluetooth connection
+remains unverified.
