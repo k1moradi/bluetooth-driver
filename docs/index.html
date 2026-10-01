@@ -61,17 +61,18 @@ the vendored source, install the Ubuntu source package and run:</p>
 <pre><code>sudo apt install linux-source-7.0.0
 scripts/verify.sh 7.0</code></pre>
 
-<h2>Bluetooth LE on this host</h2>
+<h2>Bluetooth capability on this host</h2>
 <p>The adapter currently reports HCI 2.0. HCI LE Read Buffer Size and LE Read
 Local Supported Features return <code>Unknown HCI Command</code>, so its active
 firmware does not expose Bluetooth LE. A host driver cannot add commands that
 the controller firmware rejects. The USB ID alone does not identify the
 adapter's silicon.</p>
-<p>The Razer Naga V2 HyperSpeed supports Bluetooth LE, as shown in
+<p>Razer documents Bluetooth and 2.4 GHz modes for the Naga V2 HyperSpeed, but
+does not specify whether its Bluetooth connection uses BR/EDR or LE. See
 <a href="https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro">Razer's specifications</a>
 and <a href="https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless">pairing guide</a>.
-Pairing has not been attempted because this adapter's active firmware does not
-expose LE. See the repository's
+Pairing over the controller's supported BR/EDR transport is still unverified.
+See the repository's
 <a href="https://github.com/k1moradi/bluetooth-driver/blob/main/docs/host-findings.md">host findings</a>
 for the measurements.</p>
 

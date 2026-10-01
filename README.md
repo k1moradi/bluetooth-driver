@@ -63,7 +63,7 @@ Command Complete responses, fixes the runtime-PM suspend path, and recovers
 from selected controller initialization failures with a USB reset. The
 existing device checks keep these changes scoped to detected fake adapters.
 
-## Bluetooth LE limitation on this host
+## Bluetooth capability on this host
 
 The adapter tested here reports HCI 2.0 and returns `Unknown HCI Command` for
 LE controller commands. A host-side driver patch cannot add LE commands that
@@ -72,12 +72,13 @@ does not identify the silicon or prove that another unit has the same
 firmware. See [`docs/host-findings.md`](docs/host-findings.md) for the measured
 details.
 
-The Razer Naga V2 HyperSpeed supports Bluetooth LE. Its specifications and
-pairing instructions are documented by
-[Razer](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
-and [Razer's pairing guide](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless).
-Pairing has not been attempted because the adapter's active firmware does not
-expose LE.
+Razer documents Bluetooth and 2.4 GHz modes for the Naga V2 HyperSpeed, but
+its public specifications do not identify whether the Bluetooth connection
+uses BR/EDR or LE. Its [specifications](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
+and [pairing guide](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless)
+describe the normal Bluetooth pairing flow. A pairing attempt over the
+adapter's supported BR/EDR transport is still needed to determine whether the
+mouse can connect with this controller.
 
 ## Source provenance and verification
 

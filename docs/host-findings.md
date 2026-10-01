@@ -30,9 +30,12 @@ LE HCI commands the active controller firmware rejects.
 
 ## Mouse
 
-The Razer Naga V2 HyperSpeed supports Bluetooth LE and Razer's 2.4 GHz
-HyperSpeed mode. See [Razer's specifications](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
-and [Bluetooth pairing instructions](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless).
+Razer lists Bluetooth and 2.4 GHz HyperSpeed connectivity for the Naga V2
+HyperSpeed. Its public [specifications](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
+and [Bluetooth pairing instructions](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless)
+do not say whether the Bluetooth mode uses BR/EDR or LE. This controller
+supports BR/EDR but its active firmware rejects LE HCI commands, so pairing
+over BR/EDR remains possible if the mouse supports that transport.
 
 The connected Razer device identifies as `1532:00b4`, Razer Naga V2
 HyperSpeed. Its USB descriptor reports `bcdUSB 2.00`, although the current
@@ -67,5 +70,5 @@ contain `btusb`; `modprobe` resolves it to the DKMS module.
 ## Result
 
 The driver lifecycle fixes are installed from the correctly named 7.0 source
-variant. Bluetooth LE mouse pairing remains unverified because the adapter's
-active firmware rejects LE HCI commands. Pairing was not attempted.
+variant. Mouse pairing remains unverified. The next useful check is a pairing
+attempt with the mouse in its Bluetooth mode, using BR/EDR discovery.
