@@ -81,6 +81,10 @@ device. Both
 `bluetoothctl devices` and `hcitool con` are empty on the active controller.
 No Razer address was available for a pair/connect command.
 
+After the Razer HyperSpeed receiver was physically disconnected, another
+`bluetoothctl --timeout 25 scan bredr` also found no device. The scan ended
+with `Discovering: no`, and no pair/connect command was issued.
+
 An LE scan requested immediately after the Classic scan returned
 `org.bluez.Error.InProgress`. A later `bluetoothctl show` reported
 `Discovering: no`; no LE scan result was obtained. Separate direct LE HCI
