@@ -69,15 +69,18 @@ A stale BlueZ `Naga V2 HS` record for remote address `C1:A8:E0:0F:12:79` is
 stored under local adapter address `3C:9C:0F:60:68:C2`; the record files date
 from 2026-09-24. The local address's OUI is Intel. The Naga record has
 `AddressType=static`, `SupportedTechnologies=LE`, `Trusted=true`, plus stored
-IRK and LTK key material. This is strong evidence that the Naga completed LE
-pairing and was bonded with that Intel-addressed controller. BlueZ stores the
-keys in the device info file, as described in [BlueZ's storage
+IRK and LTK key material. It records an LE pairing associated with that
+Intel-addressed adapter. BlueZ stores the keys in the device info file, as
+described in [BlueZ's storage
 code](https://github.com/bluez/bluez/blob/master/src/device.c); the absence of
-a literal `Paired=true` line is expected. The active controller is a different
-adapter (`00:15:83:15:A3:10`), and `bluetoothctl devices` lists no Naga on it.
-The Intel-addressed controller is absent from current USB/sysfs inventory. If
-that previous controller is still available in the machine, reconnecting it
-may restore the existing LE bond without another pairing procedure.
+a literal `Paired=true` line is expected. The user clarified that this Intel
+adapter belongs to another computer and is unrelated to this investigation.
+This machine is booted from the `LUBUNTU_USB` filesystem, so the cached record
+does not establish that the Intel controller is connected to or available on
+this PC, or that this PC completed the pairing. The only active controller is
+the CSR adapter (`00:15:83:15:A3:10`), and `bluetoothctl devices` lists no Naga
+on it. The Intel-addressed record is stale context and is not a hardware path
+for the current investigation.
 
 With the Naga's blue logo blinking, two earlier 30-second
 `bluetoothctl scan bredr` windows completed without discovering a device. On
