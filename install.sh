@@ -17,6 +17,11 @@ die()  { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "run as root: sudo ./install.sh"
 
+case "$KVER" in
+    7.0.*) ;;
+    *) die "this checkout includes only the Linux 7.0 source variant; running kernel is $KVER" ;;
+esac
+
 command -v dkms >/dev/null 2>&1 || \
     die "dkms is not installed. On Debian/Ubuntu: sudo apt install dkms"
 

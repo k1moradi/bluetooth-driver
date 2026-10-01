@@ -3,7 +3,8 @@
 # provenance/<variant>.manifest. Exits non-zero (and prints the diff) if the
 # committed source contains anything not derivable from the manifest + patch.
 #
-# Usage: scripts/verify.sh <variant>   (honours KERNEL_GIT like regen.sh)
+# Usage: scripts/verify.sh 7.0
+# (honours KERNEL_SOURCE_ARCHIVE or KERNEL_SOURCE_TREE like regen.sh)
 set -euo pipefail
 
 V=${1:?usage: verify.sh <variant>}

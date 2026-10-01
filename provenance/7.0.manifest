@@ -1,0 +1,24 @@
+# Reproducible source for this checkout's target kernel, Ubuntu Linux 7.0.
+#
+# Ubuntu package: linux-source-7.0.0 version 7.0.0-34.34. Its kernel tree
+# Makefile reports upstream release 7.0.14. The pristine source file hashes
+# below are checked before patches/csr8510-fix-7.0.patch is applied.
+#
+# Install the package or point KERNEL_SOURCE_ARCHIVE at its source tarball:
+#   sudo apt install linux-source-7.0.0
+#   scripts/verify.sh 7.0
+
+variant             7.0
+source-package      linux-source-7.0.0
+source-version      7.0.0-34.34
+source-release      7.0.14
+source-archive      /usr/src/linux-source-7.0.0.tar.bz2
+source-root         linux-source-7.0.0
+patch               patches/csr8510-fix-7.0.patch
+
+# file  <sha256>  <path-in-kernel-tree>              <dest-in-src>  <apply-patch?>
+file  868324e0d5779bef819eac8764b01750e8237ccad0598a3a31ce8da9931cbe02  drivers/bluetooth/btusb.c    btusb.c    yes
+file  43ab94feac41161ff6adca55002b5494117da72b968a41c972144d92b51d574e  drivers/bluetooth/btbcm.h    btbcm.h    no
+file  bef8c2e0c150aae6349a159a95a72aab3d995615bb2d1cae49bedad35ff4b5e1  drivers/bluetooth/btintel.h  btintel.h  no
+file  452d4467259f1da92f0f71bb566499f1fa0e1c89ec4f5bf7412ba8c5489daaa1  drivers/bluetooth/btrtl.h    btrtl.h    no
+file  4b5d3781d0d8e47e3282c53564e83892793bb4a18c5ca318e821220316bcd9f3  drivers/bluetooth/btmtk.h    btmtk.h    no

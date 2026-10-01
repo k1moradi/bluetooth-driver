@@ -19,7 +19,8 @@ That evidence describes this USB unit and its active firmware; it does not
 identify the chip die or prove that every device sold under this VID/PID has
 the same silicon. Qualcomm specifies the genuine CSR8510 A10 as Bluetooth 4.0,
 with Bluetooth LE and USB 2.0 support ([product specifications](https://www.qualcomm.com/bluetooth/products/csr8510)).
-The reported HCI 2.0 version and clone signature do not match those capabilities.
+The reported HCI 2.0 version and clone signature do not match those
+capabilities.
 
 Qualcomm's CSR8510 software page lists ROM patches and tools but requires a
 Qualcomm account and license agreement to access them. No firmware image has
@@ -42,34 +43,29 @@ HCI. No Bluetooth pairing attempt was made.
 
 ## Driver changes and log status
 
-The `src/6.17` variant installed through DKMS includes these fixes:
+The repository now carries only `src/7.0/`, based on Ubuntu's
+`linux-source-7.0.0` package version `7.0.0-34.34`. The source tree's top-level
+Makefile reports upstream Linux release 7.0.14. `provenance/7.0.manifest`
+pins hashes for the pristine `btusb.c` and its local headers, then applies
+`patches/csr8510-fix-7.0.patch`. `scripts/verify.sh 7.0` reproduced this
+variant from the matching source files.
 
-- resume the CSR device's runtime-PM state before waking its child USB
-  interface, avoiding the inactive-parent/active-child warning;
-- ignore expected `-ENOENT` URB completions during shutdown so the interrupt
-  completion handler does not resubmit work after unlink.
+The selector maps `7.0.0-34-generic` to `src/7.0` and rejects other kernel
+series. DKMS was rebuilt from the new variant for the running kernel. The
+patched source in `src/7.0/btusb.c` and the copy installed under
+`/usr/src/csr8510-fix-1.0.0/src/7.0/btusb.c` have matching SHA-256 hashes.
+`modinfo` resolves `btusb` to
+`/lib/modules/7.0.0-34-generic/updates/dkms/btusb.ko.zst`.
 
-The source variant is pinned to upstream Linux commit
-`e5f0a698b34ed76002dc5cff3804a61c80233a7a`. The pristine `btusb.c` and the
-Linux Bluetooth core reference files are retained under `provenance/`.
-`scripts/verify.sh 6.17` reproduced the source from its pinned hashes and
-patch. DKMS is installed for the running kernel, and its source matches
-`src/6.17/btusb.c`.
-
-The latest module reload showed no PM parent/child warning or shutdown URB
-resubmit error. Earlier boot/reload messages in this boot journal predate the
-final module install. The remaining `HCI ... advertised, but not supported`
-messages are emitted by Linux when it records the clone-specific quirks that
-skip commands the controller firmware misreports. They identify unsupported
-controller commands; they are not failures of the PM or URB fixes.
-
-The current initramfs does not contain `btusb`; `modprobe` resolves it to the
-DKMS copy in `updates/dkms`. A fresh boot after the final module install has
-not yet been observed.
+The latest module reload showed no inactive-parent/active-child PM warning or
+shutdown URB resubmit error. It logged the expected unbranded-clone detection,
+the new `CSR: masking unsupported advertised HCI commands` message, and the
+remaining unsupported `Set Event Filter` warning. A fresh boot after this
+latest reinstall has not yet been observed. The current initramfs does not
+contain `btusb`; `modprobe` resolves it to the DKMS module.
 
 ## Result
 
-The driver lifecycle faults have been patched and the current DKMS module is
-active. Bluetooth LE mouse pairing remains unverified and cannot proceed with
-the controller's current HCI firmware response. A validated firmware image
-for this exact adapter or an LE-capable controller is still needed.
+The driver lifecycle fixes are installed from the correctly named 7.0 source
+variant. Bluetooth LE mouse pairing remains unverified because the adapter's
+active firmware rejects LE HCI commands. Pairing was not attempted.

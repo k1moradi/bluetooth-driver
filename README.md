@@ -1,100 +1,33 @@
-# Bluetooth driver support
+# Bluetooth driver for Linux 7.0
 
-This repository is a maintained copy and adaptation of
-[`hhsnake/csr8510-fix`](https://github.com/hhsnake/csr8510-fix). It packages the
-Linux `btusb` workaround for fake CSR8510 A10 Bluetooth dongles as a DKMS
-module. The module package itself is named `csr8510-fix` to match its DKMS
-registration.
+This repository contains the patched Linux `btusb` driver for the unbranded
+CSR clone adapter examined on this machine. It packages the driver as a DKMS
+module named `csr8510-fix`.
+The initial DKMS packaging and CSR workaround are adapted from
+[`hhsnake/csr8510-fix`](https://github.com/hhsnake/csr8510-fix).
+
+The repository is deliberately scoped to the host's Linux 7.0 kernel series.
+It includes no older kernel source variants. `src/7.0/` is based on Ubuntu's
+`linux-source-7.0.0` package version `7.0.0-34.34` (whose source tree reports
+upstream release 7.0.14), matching the installed `7.0.0-34-generic` kernel.
+The DKMS build uses the installed kernel headers.
 
 ## Repository layout
 
 ```text
+src/7.0/       Patched btusb.c and its four local Bluetooth headers
+patches/       Patch for the Ubuntu Linux 7.0 source
+provenance/    Source package manifest and host findings
 scripts/       Source regeneration and reproducibility checks
-src/<version>/ Version-matched btusb.c and the kernel headers it includes
-patches/       Per-kernel source patches
-provenance/    Pinned upstream hashes, manifests, and source references
-docs/          Project pages and host-specific findings
+docs/          Project page and host-specific findings
 ```
 
-Each `src/<version>/` directory keeps `btusb.c` beside the exact kernel
-headers for that source version. The DKMS selector copies this matched set
-together for the build, so there is no shared `include/` directory.
-
-## Bluetooth Low Energy capability
-
-The driver patch handles known USB and HCI initialization faults in supported
-CSR clone adapters. It cannot add Bluetooth Low Energy (LE) support when the
-adapter firmware does not implement LE HCI commands. Qualcomm specifies the
-genuine CSR8510 A10 as Bluetooth 4.0 with LE and USB 2.0; the adapter examined
-here instead reports HCI 2.0 and rejects LE commands. Its USB ID alone does not
-prove which silicon is inside. See [`docs/host-findings.md`](docs/host-findings.md)
-for the measured details and firmware-access status.
-
-The Naga V2 HyperSpeed supports Bluetooth LE and 2.4 GHz HyperSpeed modes;
-Razer documents [the mouse specifications](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
-and [Bluetooth pairing steps](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless).
-
----
-
-## `csr8510-fix` DKMS package
-
-Patched Linux `btusb` driver for **fake CSR8510 A10 / CSR 4.0–5.x clone USB
-Bluetooth dongles** (`0a12:0001`), packaged as DKMS so it is rebuilt
-automatically on every kernel update. Kernels 5.4 – 7.1+.
-
-## Is this your device?
-
-You are in the right place if `lsusb` / `dmesg` shows:
-
-```
-ID 0a12:0001 Cambridge Silicon Radio, Ltd Bluetooth Dongle (HCI mode)
-usb: Product: CSR8510 A10, idVendor=0a12, idProduct=0001, bcdDevice=25.20
-Bluetooth: hci0: CSR: Setting up dongle with HCI ver=9 rev=3120
-Bluetooth: hci0: LMP ver=9 subver=22bb; manufacturer=10
-```
-
-and Bluetooth fails with any of:
-
-```
-Bluetooth: hci0: CSR: Local version failed (-32)
-Bluetooth: hci0: command 0x1001 tx timeout
-Bluetooth: hci0: Opcode 0x0c03 failed: -110
-or
-Bluetooth: hci0: Opcode 0x0c25 failed: -110
-Can't init device hci0: Connection timed out (110)
-```
-
-These are cheap clone chips (Barrot 8041a02 and similar, usually sold as a
-"Bluetooth 5.0/5.1/5.3 USB adapter" — e.g. ORICO BTA-403, Орбита OT-PCB13
-and countless no-name AliExpress dongles) that pretend to be a real CSR
-chip but return malformed HCI responses. Known fake `bcdDevice` values:
-`0x0100, 0x0134, 0x1915, 0x2520, 0x7558, 0x8891`. The stock kernel already
-detects them (*"Unbranded CSR clone detected"*) but its workarounds are not
-enough for this hardware. This patch additionally:
-
-* stops `Read Page Scan Type` 0x0c46 — which these clones answer with a
-  truncated payload — from ever being sent, by clearing its bit in the
-  Supported Commands bitmap the clone advertises;
-* pads the undersized Command Complete payloads the clones return for
-  `Read Voice Setting` 0x0c25, `Read Transmit Power Level` 0x0c2d and
-  0x0c46. 0x0c25 is deliberately left advertised: since v6.15 the core
-  treats an unsupported Read Voice Setting as "no SCO" and zeroes the SCO
-  buffer count, which disables HFP audio;
-* fixes the fragile USB runtime-PM suspend workaround;
-* auto-recovers with a USB reset from init failures and command timeouts,
-  including a dongle that answers nothing at all — not even the very first
-  `Reset` (0x0c03) — instead of leaving the controller stuck.
-
-There is also a second, quieter failure mode with no error at all in the
-usual places: the adapter comes up looking perfectly healthy, but the
-desktop's Bluetooth panel never finds a single device, while
-`bluetoothctl scan on` from a terminal finds them immediately.
-
-Only detected fake devices are affected — real CSR hardware is untouched.
+The selector accepts only kernel releases in the `7.0.x` series, so DKMS will
+not silently build these sources against another kernel series.
 
 ## Install
 
-### Ubuntu / Debian
+On Ubuntu with the 7.0 kernel running:
 
 ```bash
 sudo apt install git dkms linux-headers-$(uname -r)
@@ -103,216 +36,75 @@ cd bluetooth-driver
 sudo ./install.sh
 ```
 
-### Fedora
+The install script builds and installs only for the running kernel. The module
+is placed under `/lib/modules/<kernel>/updates/dkms/`; the in-tree driver is
+not overwritten. Check the installation with:
 
 ```bash
-sudo dnf install git dkms kernel-devel-$(uname -r)
-git clone https://github.com/k1moradi/bluetooth-driver.git
-cd bluetooth-driver
-sudo ./install.sh
+dkms status csr8510-fix
+modinfo -F filename btusb
+journalctl -k -b | grep -iE 'bluetooth|csr'
 ```
 
-### RED OS 7 / RED OS 8
-
-The running kernel comes from the `kernel-lt` package, so the Fedora line above
-fails: `kernel-devel-$(uname -r)` does not exist and `dnf` answers *"Совпадений
-не найдено"*. Derive the name from the installed kernel instead — this form works
-on any RPM distribution, whatever its kernel package is called:
-
-```bash
-K=$(rpm -qf --qf '%{NAME}' /boot/vmlinuz-$(uname -r))
-sudo dnf install git dkms gcc make bc elfutils-libelf-devel bluez \
-  "$K-devel-$(uname -r)"
-sudo systemctl enable --now bluetooth
-git clone https://github.com/k1moradi/bluetooth-driver.git
-cd bluetooth-driver
-sudo ./install.sh
-```
-
-### Arch Linux
-
-```bash
-sudo pacman -S git dkms linux-headers bluez-utils
-sudo systemctl enable --now bluetooth
-git clone https://github.com/k1moradi/bluetooth-driver.git
-cd bluetooth-driver
-sudo ./install.sh
-```
-
-### CachyOS
-
-```bash
-sudo pacman -S --needed git dkms bluez bluez-utils \
-  "$(pacman -Qoq /usr/lib/modules/$(uname -r)/vmlinuz)-headers"
-sudo systemctl enable --now bluetooth
-git clone https://github.com/k1moradi/bluetooth-driver.git
-cd bluetooth-driver
-sudo ./install.sh
-```
-
-### SteamOS
-
-System -> Konsole. The root filesystem is read-only and ships without a
-package database, so it has to be opened up first:
-
-```bash
-sudo steamos-readonly disable
-sudo pacman-key --init
-sudo pacman-key --populate
-sudo pacman -Sy
-
-K=$(pacman -Qoq /usr/lib/modules/$(uname -r)/vmlinuz)
-sudo pacman -S --needed git dkms gcc make bc bluez bluez-utils "$K" "$K-headers"
-sudo systemctl enable --now bluetooth
-sudo reboot
-```
-
-After the reboot System -> Konsole:
-
-```bash
-git clone https://github.com/k1moradi/bluetooth-driver.git
-cd bluetooth-driver
-sudo ./install.sh
-```
-
-> **SteamOS updates remove the module.** The system updates by replacing
-> the whole root image (A/B slots), so `/usr/lib/modules`, `/usr/src` and
-> the `steamos-readonly disable` state are all reset. Re-run `install.sh`
-> after each system update, or keep the built `.ko` on `/home` — that
-> partition survives updates — and load it from a systemd unit.
-
-The module is installed to `/lib/modules/<ver>/updates/dkms/` (takes
-precedence over the stock module, nothing in the kernel is overwritten)
-and rebuilt automatically by DKMS on every kernel update.
-
-Verify:
-
-```bash
-dkms status csr8510-fix                # -> installed
-modinfo -F filename btusb            # -> .../updates/dkms/btusb.ko(.zst)
-journalctl -kf | grep -iE 'bluetooth|csr'   # then plug in the dongle
-```
-
-Uninstall (returns to the stock driver):
+To return to the stock driver:
 
 ```bash
 sudo ./uninstall.sh
 ```
 
-## Supported kernels
+Secure Boot may require a DKMS signing key enrolled through MOK.
 
-| Variant | Used for kernels | Tested on |
-|---|---|---|
-| `src/5.4`  | < 5.13      | 5.4.0-42, 5.4.0-216-generic (Ubuntu 20.04); 5.8.0-63, 5.11.0-46-generic (Ubuntu 20.04 HWE); 5.10.0-9-amd64 (Debian 11) |
-| `src/5.13` | 5.13 – 5.14 | 5.13.0-52-generic (Ubuntu 20.04 HWE) |
-| `src/5.15` | 5.15 – 5.18 | 5.15.0-185-generic (Ubuntu 22.04) |
-| `src/5.19` | 5.19 – 6.1  | 5.19.0-50-generic (Ubuntu 22.04); 6.1.175-1.el7.3 (RED OS 7.3.7); 6.1.0-53-amd64 (Debian 12) |
-| `src/6.2`  | 6.2 – 6.4   | 6.2.0-39-generic (Ubuntu 22.04) |
-| `src/6.5`  | 6.5 – 6.7   | 6.5.0-45-generic (Ubuntu 22.04) |
-| `src/6.8`  | 6.8 – 6.10  | 6.8.0-94, 6.8.0-134, 6.8.0-138-generic (Ubuntu 22.04) |
-| `src/6.11` | 6.11 – 6.13 | 6.11.0-29-generic (Ubuntu 24.04); 6.11.4-301.fc41 (Fedora 41); 6.12.92-1.red80 (RED OS 8.0.3); 6.12.101+deb12-amd64 (Debian 12 backports); 6.12.107+deb13-amd64 (Debian 13) |
-| `src/6.14` | 6.14 – 6.16 | 6.14.0-37-generic (Ubuntu 24.04); 6.16.12-valve24.5-1-neptune-616 (SteamOS 3.8.14) |
-| `src/6.17` | ≥ 6.17      | 6.17.0-35-generic, 7.0.0-14-generic (Ubuntu 24.04); 6.17.10-100.fc41 (Fedora 41); 6.19.10-300.fc44, 7.1.4-200.fc44 (Fedora 44); 7.1.4-arch1-1, 6.18.39-1-lts, 7.1.4-zen1-1 (Arch), 7.1.8-1-cachyos |
+## What the patch changes
 
-The right variant is picked automatically at build time. Untested versions
-in between get the nearest variant and usually build fine; if the build
-fails, check `/var/lib/dkms/csr8510-fix/<version>/build/make.log` and open
-an issue.
+The patch handles malformed HCI responses and USB lifecycle problems reported
+by this class of fake CSR8510 A10 adapters. It clears Supported Commands bits
+for commands the clone advertises but does not implement, pads several short
+Command Complete responses, fixes the runtime-PM suspend path, and recovers
+from selected controller initialization failures with a USB reset. The
+existing device checks keep these changes scoped to detected fake adapters.
 
-## Building your own kernel instead?
+## Bluetooth LE limitation on this host
 
-Apply the matching diff from [`patches/`](patches/):
+The adapter tested here reports HCI 2.0 and returns `Unknown HCI Command` for
+LE controller commands. A host-side driver patch cannot add LE commands that
+the active adapter firmware does not implement. The `0a12:0001` USB ID alone
+does not identify the silicon or prove that another unit has the same
+firmware. See [`docs/host-findings.md`](docs/host-findings.md) for the measured
+details.
 
-```bash
-cd linux-<version>
-patch -p1 < .../patches/csr8510-fix-6.17.patch
-```
+The Razer Naga V2 HyperSpeed supports Bluetooth LE. Its specifications and
+pairing instructions are documented by
+[Razer](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
+and [Razer's pairing guide](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless).
+Pairing has not been attempted because the adapter's active firmware does not
+expose LE.
 
-## LE that only looked broken
+## Source provenance and verification
 
-These clones report Bluetooth LE in their local features, and early on that
-looked like a lie: LE commands came back as failures and desktop discovery
-died on the LE half.
-
-```
-Bluetooth: hci0: Opcode 0x2005 failed: -32     # LE Set Random Address
-Bluetooth: hci0: Opcode 0x200b failed: -32     # LE Set Scan Parameters
-```
-
-Desktop Bluetooth stacks start discovery in dual mode, so a failing LE half
-aborts the whole scan and nothing is ever found — while `bluetoothctl scan on`
-still works, because it falls back to BR/EDR. Nothing looks broken:
-`hciconfig` shows `UP RUNNING` with a valid BD address, and the controller
-answers everything else. That combination makes the fault read as a desktop
-bug rather than a controller one.
-
-The controller answers LE commands correctly. The real fault is two BR/EDR
-replies that come back a byte short, and the driver stops the core from
-asking for them — so LE is left alone and simply works.
-
-Only devices matching `0a12:0001` **and** detected as fake are affected. Other
-adapters in the same machine are untouched.
-
-To rule the workaround out while debugging:
+Install Ubuntu's matching source package and regenerate the vendored files:
 
 ```bash
-# /etc/modprobe.d/csr8510-fix.conf
-options btusb csr_mask_commands=0
+sudo apt install linux-source-7.0.0
+scripts/verify.sh 7.0
 ```
 
-**If LE still misbehaves on your clone.** Firmware varies between these
-dongles. Forcing bluetoothd to BR/EDR is the fallback — note it is a *global*
-setting that disables LE for every controller on the host, including a working
-built-in one.
+The manifest pins hashes for each pristine source file before applying
+[`patches/csr8510-fix-7.0.patch`](patches/csr8510-fix-7.0.patch). To regenerate
+into `src/7.0/` explicitly, run `scripts/regen.sh 7.0`.
 
-```ini
-# /etc/bluetooth/main.conf
-[General]
-ControllerMode = bredr
-```
+To apply the patch to a full Ubuntu 7.0 kernel source tree:
 
 ```bash
-sudo systemctl restart bluetooth
+cd linux-source-7.0.0
+patch -p1 < /path/to/bluetooth-driver/patches/csr8510-fix-7.0.patch
 ```
 
 ## Troubleshooting
 
-* **Nothing is found after installing, although the adapter looks fine** —
-  reloading the module (which `install.sh` does at the end) rebinds the
-  driver without re-enumerating the device, so the receive-issue
-  workaround is skipped. The dongle then comes up `UP RUNNING` with a
-  valid BD address and finds nothing. **Unplug it and plug it back in.**
-  A USB reset or `systemctl restart bluetooth` is not enough: the
-  controller ignores an in-band `Reset` (0x0c03).
-* **Secure Boot**: the module is signed automatically if DKMS MOK signing
-  is set up; otherwise enroll a key (`man mokutil`) or disable Secure Boot.
-* **Two Bluetooth adapters** — a built-in controller may interfere;
-  disable it for testing: `rfkill list`, then `rfkill block <id>`.
-* **`module verification failed ... tainting kernel`** in dmesg is harmless
-  on machines without Secure Boot — it only means the module is unsigned.
-
-## Questions & feedback
-
-Bug reports, questions and suggestions are welcome in
-[GitHub Issues](https://github.com/k1moradi/bluetooth-driver/issues).
-When reporting, please attach the output of `uname -r`,
-`lsusb | grep 0a12` and `journalctl -k | grep -iE 'bluetooth|csr'`.
-
-## Credits
-
-* Ismael Ferreras Morezuelas ([@Swyter](https://github.com/Swyter)) — clone
-  detection, the fake `bcdDevice` table, the generic force-suspend workaround
-  (`cde1a8a99287`, `f4292e2faf52`, `b3cf94c8b6b2`, `42d7731e3e74`). The comments
-  in `btusb_setup_csr()` are his, and this README paraphrases them.
-* Hans de Goede — Barrot 8041a02 remote-wakeup workaround (`0671c0662383`).
-* Pedro Nishiyama — the broken-command quirks for 0x0c25/0x0c46 (`1f04b0e5e3b9`, v6.15).
-* Arkadiusz Bokowy — the trailing-byte defrag check (`7722d6fb54e4`, v6.18).
-* Marcel Holtmann, Luiz Augusto von Dentz and the linux-bluetooth contributors.
-* Kernel [bugzilla #60824](https://bugzilla.kernel.org/show_bug.cgi?id=60824)
-  and [nevack's gist](https://gist.github.com/nevack/6b36b82d715dc025163d9e9124840a07),
-  where the `bcdDevice` values and HCI traces were collected.
-
-## License
-
-GPL-2.0 (same as the Linux kernel — `btusb.c` is derived from kernel
-sources). See [LICENSE](LICENSE).
+- If the DKMS build fails, inspect
+  `/var/lib/dkms/csr8510-fix/1.0.0/build/make.log`.
+- If the desktop cannot discover devices, inspect the controller's LE
+  commands with `btmon` and check `journalctl -k`; this patch cannot add LE
+  capability missing from adapter firmware.
+- If a kernel outside 7.0.x is booted, this package intentionally refuses to
+  select a source variant. It contains only `src/7.0/`.

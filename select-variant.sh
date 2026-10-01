@@ -1,28 +1,6 @@
 #!/bin/sh
-# DKMS PRE_BUILD hook: pick the btusb source variant matching the target
-# kernel and copy it into the build root, where the kbuild Makefile
-# (obj-m := btusb.o) expects it.
-#
-# Variants (each is the full patched drivers/bluetooth/btusb.c of that
-# kernel series plus the local headers it includes):
-#   src/5.4   - kernels < 5.13     (tested on 5.4.0-42, 5.4.0-216-generic,
-#                                   5.8.0-63, 5.10.0-9, 5.11.0-46)
-#   src/5.13  - kernels 5.13..5.14 (tested on 5.13.0-52-generic)
-#   src/5.15  - kernels 5.15..5.18 (tested on 5.15.0-185-generic)
-#   src/5.19  - kernels 5.19..6.1  (tested on 5.19.0-50-generic;
-#                                   6.1.0-53-amd64)
-#   src/6.2   - kernels 6.2..6.4   (tested on 6.2.0-39-generic)
-#   src/6.5   - kernels 6.5..6.7   (tested on 6.5.0-45-generic)
-#   src/6.8   - kernels 6.8..6.10  (tested on 6.8.0-94/134-generic)
-#   src/6.11  - kernels 6.11..6.13 (tested on 6.11.0-29-generic;
-#                                   6.11.4-301.fc41; 6.12.101+deb12-amd64;
-#                                   6.12.107+deb13-amd64)
-#   src/6.14  - kernels 6.14..6.16 (tested on 6.14.0-37-generic; these
-#                                   Ubuntu/stable trees backported the
-#                                   quirk_flags API and removed cmd_timeout)
-#   src/6.17  - kernels >= 6.17    (tested on 6.17.0-35-generic,
-#                                   7.0.0-14-generic; 6.17.10-100.fc41,
-#                                   6.19.10-300.fc44, 7.1.4-200.fc44)
+# DKMS PRE_BUILD hook: select the source matching this checkout's target kernel.
+# This repository intentionally carries only the Ubuntu Linux 7.0 source.
 #
 # Usage: select-variant.sh [kernelver]
 # Runs from the build/source root (DKMS runs PRE_BUILD there).
@@ -30,48 +8,21 @@
 set -e
 
 kv="${1:-$(uname -r)}"
-base="${kv%%-*}"                 # e.g. 6.11.0-29-generic -> 6.11.0
-maj="${base%%.*}"
-rest="${base#*.}"
-min="${rest%%.*}"
+base="${kv%%-*}"             # e.g. 7.0.0-34-generic -> 7.0.0
 
-case "$maj$min" in
-    *[!0-9]*|'')
-        echo "csr8510-fix: cannot parse kernel version '$kv'" >&2
+case "$base" in
+    7.0.*) variant=7.0 ;;
+    *)
+        echo "csr8510-fix: this checkout supports kernel 7.0.x; got '$kv'" >&2
         exit 1
         ;;
 esac
 
-n=$((maj * 100 + min))
-
-if   [ "$n" -ge 617 ]; then variant=6.17
-elif [ "$n" -ge 614 ]; then variant=6.14
-elif [ "$n" -ge 611 ]; then variant=6.11
-elif [ "$n" -ge 608 ]; then variant=6.8
-elif [ "$n" -ge 605 ]; then variant=6.5
-elif [ "$n" -ge 602 ]; then variant=6.2
-elif [ "$n" -ge 519 ]; then variant=5.19
-elif [ "$n" -ge 515 ]; then variant=5.15
-elif [ "$n" -ge 513 ]; then variant=5.13
-else                        variant=5.4
-fi
-
-# Versions the variants were actually built and run against.
-case "$n" in
-    504|508|510|511|513|515|519|601|602|605|608|611|612|614|617|619|700|701) tested=yes ;;
-    *)                                                                 tested=no  ;;
-esac
+srcdir="$(dirname "$0")/src/$variant"
+[ -d "$srcdir" ] || {
+    echo "csr8510-fix: missing source directory $srcdir" >&2
+    exit 1
+}
 
 echo "csr8510-fix: kernel $kv -> source variant src/$variant"
-if [ "$tested" = no ]; then
-    echo "csr8510-fix: note: kernel series $maj.$min is untested with this" \
-         "package; using the nearest variant. If the build fails, please" \
-         "open an issue at https://github.com/k1moradi/bluetooth-driver" >&2
-fi
-if [ "$n" -lt 504 ]; then
-    echo "csr8510-fix: warning: kernels older than 5.4 were never targeted" \
-         "and will likely fail to build." >&2
-fi
-
-srcdir="$(dirname "$0")/src/$variant"
 cp -f "$srcdir"/*.c "$srcdir"/*.h "$(dirname "$0")/"

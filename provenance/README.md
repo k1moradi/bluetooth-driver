@@ -1,11 +1,11 @@
 # Source provenance
 
-The DKMS packaging and per-kernel workaround variants originate from
-[`hhsnake/csr8510-fix`](https://github.com/hhsnake/csr8510-fix). Their upstream
-credits and GPL-2.0 license are preserved in the repository.
+This checkout carries only the Linux 7.0 source variant. Its pristine files
+come from Ubuntu's `linux-source-7.0.0` package version `7.0.0-34.34`; the
+source archive's top-level kernel Makefile identifies upstream release
+7.0.14. `7.0.manifest` records source file hashes and the patch path.
 
-The manifests in this directory pin the Linux source commit, pristine source
-file hashes, and patch path for each reproducible variant. `scripts/regen.sh`
-fetches and verifies these files before applying the patch. The additional
-`kernel-6.17/` and `kernel-7.0.0/` trees retain the exact reference files used
-during the CSR dongle investigation documented in `docs/host-findings.md`.
+Run `scripts/verify.sh 7.0` to regenerate the variant from the matching source
+archive and compare it byte-for-byte with `src/7.0/`. The original DKMS
+packaging and CSR workaround credit are retained in the repository history
+and GPL-2.0 license.
