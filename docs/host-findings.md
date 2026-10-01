@@ -15,6 +15,12 @@ The HCI LE Read Buffer Size command (`OGF 0x08`, `OCF 0x0002`, opcode
 through its active firmware. `lsusb -t` also shows this adapter currently
 running at full speed (12 Mbps).
 
+On the current boot, the first USB device-descriptor read on `usb2-2` failed
+once with `-71` (`EPROTO`); the immediate retry succeeded and enumerated the
+adapter as `0a12:0001`. The error occurs before `btusb` binds, so the DKMS
+driver cannot correct that first-read failure. No repeated descriptor or
+disconnect errors were present in the inspected log.
+
 That evidence describes this USB unit and its active firmware; it does not
 identify the chip die or prove that every device sold under this VID/PID has
 the same silicon. Qualcomm specifies the genuine CSR8510 A10 as Bluetooth 4.0,
@@ -43,6 +49,13 @@ USB link is full speed (12 Mbps). This USB enumeration is separate from the
 CSR Bluetooth controller. HCI is the host-controller interface between Linux
 and the Bluetooth controller; the mouse does not need to implement host-side
 HCI. No Bluetooth pairing attempt was made.
+
+A BlueZ `Naga V2 HS` record exists under local adapter address
+`3C:9C:0F:60:68:C2`, while the active controller address is
+`00:15:83:15:A3:10`. `bluetoothctl devices` lists no device on the active
+controller. The saved record has `Trusted=true` but no `Paired=true` field;
+its LE-only technology entry therefore does not establish the current mouse's
+Bluetooth transport or pairing state.
 
 ## Driver changes and log status
 
