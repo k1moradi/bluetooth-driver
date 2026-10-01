@@ -64,8 +64,16 @@ The latest module reload showed no inactive-parent/active-child PM warning or
 shutdown URB resubmit error. It logged the expected unbranded-clone detection,
 the new `CSR: masking unsupported advertised HCI commands` message, and the
 remaining unsupported `Set Event Filter` warning. A fresh boot after this
-latest reinstall has not yet been observed. The current initramfs does not
-contain `btusb`; `modprobe` resolves it to the DKMS module.
+latest reinstall has not yet been observed.
+
+This host boots with Dracut 110 (`dracut-cmdline.service` ran during the
+current boot); the `initramfs-tools` package is not installed. The root-only
+`lsinitrd` listing of `/boot/initrd.img-7.0.0-34-generic` contains no `btusb`
+module. It does contain the DKMS `8812au` and `nouveau` modules. The active
+`/etc/dracut.conf.d/99-portable-usb.conf` sets `hostonly="no"` and does not
+request `btusb`. The Bluetooth module therefore loads after root is mounted,
+from `/lib/modules/7.0.0-34-generic/updates/dkms/btusb.ko.zst`. No Dracut
+configuration change is needed for this module.
 
 ## Result
 
