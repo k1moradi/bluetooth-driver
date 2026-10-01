@@ -63,14 +63,21 @@ HyperSpeed. Its USB descriptor reports `bcdUSB 2.00`, although the current
 USB link is full speed (12 Mbps). This USB enumeration is separate from the
 CSR Bluetooth controller. HCI is the host-controller interface between Linux
 and the Bluetooth controller; the mouse does not need to implement host-side
-HCI. No Bluetooth pairing attempt was made.
+HCI. No new pairing command has been issued during this investigation.
 
-A BlueZ `Naga V2 HS` record exists under local adapter address
-`3C:9C:0F:60:68:C2`, while the active controller address is
-`00:15:83:15:A3:10`. `bluetoothctl devices` lists no device on the active
-controller. The saved record has `Trusted=true` but no `Paired=true` field;
-its LE-only technology entry therefore does not establish the current mouse's
-Bluetooth transport or pairing state.
+A stale BlueZ `Naga V2 HS` record for remote address `C1:A8:E0:0F:12:79` is
+stored under local adapter address `3C:9C:0F:60:68:C2`; the record files date
+from 2026-09-24. The local address's OUI is Intel. The Naga record has
+`AddressType=static`, `SupportedTechnologies=LE`, `Trusted=true`, plus stored
+IRK and LTK key material. This is strong evidence that the Naga completed LE
+pairing and was bonded with that Intel-addressed controller. BlueZ stores the
+keys in the device info file, as described in [BlueZ's storage
+code](https://github.com/bluez/bluez/blob/master/src/device.c); the absence of
+a literal `Paired=true` line is expected. The active controller is a different
+adapter (`00:15:83:15:A3:10`), and `bluetoothctl devices` lists no Naga on it.
+The Intel-addressed controller is absent from current USB/sysfs inventory. If
+that previous controller is still available in the machine, reconnecting it
+may restore the existing LE bond without another pairing procedure.
 
 With the Naga's blue logo blinking, two earlier 30-second
 `bluetoothctl scan bredr` windows completed without discovering a device. On
