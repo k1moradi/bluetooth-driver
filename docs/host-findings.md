@@ -66,6 +66,15 @@ the new `CSR: masking unsupported advertised HCI commands` message, and the
 remaining unsupported `Set Event Filter` warning. A fresh boot after this
 latest reinstall has not yet been observed.
 
+The `Set Event Filter` warning is the Bluetooth core reporting
+`HCI_QUIRK_BROKEN_FILTER_CLEAR_ALL`, which the clone-specific `btusb` setup
+enables. In this kernel the quirk makes the event-filter helper return before
+it sends `HCI_OP_SET_EVENT_FLT`; removing it could send the command that locks
+up some clone controllers. This warning describes the active protection, not
+a failed command transaction. Earlier stored-link-key and erroneous-data
+warnings in this boot's log came from the module loaded before the latest
+reload; the current module masks those advertised command bits.
+
 This host boots with Dracut 110 (`dracut-cmdline.service` ran during the
 current boot); the `initramfs-tools` package is not installed. The root-only
 `lsinitrd` listing of `/boot/initrd.img-7.0.0-34-generic` contains no `btusb`
