@@ -58,13 +58,22 @@ controller. The saved record has `Trusted=true` but no `Paired=true` field;
 its LE-only technology entry therefore does not establish the current mouse's
 Bluetooth transport or pairing state.
 
-With the Naga's blue logo blinking, two 30-second `bluetoothctl scan bredr`
-windows completed without discovering a device. `bluetoothctl devices` and
-`hcitool con` were empty afterward, and discovery was stopped. No pair or
-connect command was issued. A subsequent `scan le` request returned
-`org.bluez.Error.InProgress` even though `bluetoothctl show` reported
-`Discovering: no`; that request did not establish LE discovery. The direct LE
-HCI capability commands still return `Unknown HCI Command`.
+With the Naga's blue logo blinking, two earlier 30-second
+`bluetoothctl scan bredr` windows completed without discovering a device. On
+2026-10-01, after the user again reported the mouse ready for pairing,
+`bluetoothctl --timeout 25 scan bredr` started successfully but reported no
+device. A direct `hcitool -i hci0 scan --flush` inquiry also returned no
+device. Both
+`bluetoothctl devices` and `hcitool con` are empty on the active controller.
+No Razer address was available for a pair/connect command.
+
+An LE scan requested immediately after the Classic scan returned
+`org.bluez.Error.InProgress`. A later `bluetoothctl show` reported
+`Discovering: no`; no LE scan result was obtained. Separate direct LE HCI
+capability commands return
+`Unknown HCI Command`, so this controller's active firmware does not expose
+LE. The Razer pairing attempt therefore remains unresolved: Classic discovery
+did not find the mouse, and LE discovery cannot be tested with this controller.
 
 ## Driver changes and log status
 
@@ -111,8 +120,10 @@ configuration change is needed for this module.
 ## Result
 
 The driver lifecycle fixes are installed from the correctly named 7.0 source
-variant and verified after a fresh boot. The mouse was not discovered in two
-BR/EDR windows while its pairing indicator was blinking; its Bluetooth
-transport remains undocumented by Razer. The current adapter cannot perform
-LE HCI operations, so an LE-only Naga cannot connect through this firmware.
-No pairing attempt was made.
+variant and verified after a fresh boot. The mouse was not discovered in the
+two earlier BR/EDR windows or in the 2026-10-01 BR/EDR retest while the user
+reported pairing mode active. No device address was found, so no pair/connect
+command could be issued. Razer's public documentation still does not identify
+the mouse's Bluetooth transport. This adapter cannot perform LE HCI operations;
+if the Naga uses LE-only HID, it cannot connect through this controller's
+active firmware. Connection remains unverified.

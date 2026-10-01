@@ -76,9 +76,12 @@ Razer documents Bluetooth and 2.4 GHz modes for the Naga V2 HyperSpeed, but
 its public specifications do not identify whether the Bluetooth connection
 uses BR/EDR or LE. Its [specifications](https://mysupport.razer.com/app/answers/detail/a_id/6392/kw/Razer%20Naga%20Pro)
 and [pairing guide](https://mysupport.razer.com/app/answers/detail/a_id/5387/kw/razer%202.4%20wireless)
-describe the normal Bluetooth pairing flow. A pairing attempt over the
-adapter's supported BR/EDR transport is still needed to determine whether the
-mouse can connect with this controller.
+describe the normal Bluetooth pairing flow. A BR/EDR discovery scan and a
+direct Classic inquiry were run while the user reported the mouse in pairing
+mode; neither found it, so no address was available for pairing. The adapter's
+active firmware rejects LE HCI commands, leaving the Naga's Bluetooth
+transport unresolved. See [`docs/host-findings.md`](docs/host-findings.md) for
+the exact scan results.
 
 ## Source provenance and verification
 
